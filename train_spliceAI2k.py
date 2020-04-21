@@ -118,33 +118,40 @@ def spliceAI_model(input_shape, num_classes=3):
 
     # initiate 
     x = Conv1D(32, kernel_size=1, strides=1, padding='same', dilation_rate=1)(inputs)
-    y = Conv1D(32, kernel_size=1, strides=1, padding='same', dilation_rate=1)(inputs)
+
+    # shortcut 1: just another Conv on x
+    y = Conv1D(32, kernel_size=1, strides=1, padding='same', dilation_rate=1)(x)
 
     # RB 1: 32 11 1
     for stack in range(4):
         x = RB_block(x, num_filters=32, kernel_size=11, strides=1, activation='relu', dilation_rate=1)
 
-    y = keras.layers.add([x, y])
+    # shortcut 2: Conv on x + add to existing shortcut
+    y = keras.layers.add([Conv1D(32, kernel_size=1, strides=1, padding='same', dilation_rate=1)(x), y])
 
     # RB 2: 32 11 4
     for stack in range(4):
         x = RB_block(x, num_filters=32, kernel_size=11, strides=1, activation='relu', dilation_rate=4)
 
-    y = keras.layers.add([x, y])  
+    # shortcut 3: Conv on x + add to existing shortcut
+    y = keras.layers.add([Conv1D(32, kernel_size=1, strides=1, padding='same', dilation_rate=1)(x), y])  
 
     # RB 3: 32 21 10
     for stack in range(4):
         x = RB_block(x, num_filters=32, kernel_size=21, strides=1, activation='relu', dilation_rate=10)
 
+    # another Conv on x
     x = Conv1D(32, kernel_size=1, strides=1, padding='same', dilation_rate=1)(x)
 
-    # now adding up what was shortcut from the prev layers
+    # now adding up with what was shortcut from the prev layers
     x = keras.layers.add([x, y]) 
 
+    # final Conv
     x = Conv1D(3, kernel_size=1, strides=1, padding='same', dilation_rate=1)(x)
 
     x = Dense(num_classes, activation='softmax')(x)
 
+    # crop to fit the labels (7k to 5k)
     outputs = Cropping1D(cropping=(1000, 1000))(x)
 
     model = Model(inputs=inputs, outputs=outputs)
