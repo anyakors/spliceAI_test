@@ -152,8 +152,8 @@ def spliceAI_model(input_shape, num_classes=3):
     return model
 
 
-transcripts_ = np.loadtxt('./data/transcripts_chunks_chr20', dtype='str', delimiter='\t')
-labels_ = np.loadtxt('./data/labels_chunks_chr20', dtype='str', delimiter='\t')
+transcripts_ = np.loadtxt('./data/transcripts', dtype='str', delimiter='\t')
+labels_ = np.loadtxt('./data/labels', dtype='str', delimiter='\t')
 
 transcripts = []
 labels = []

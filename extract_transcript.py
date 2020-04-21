@@ -46,7 +46,7 @@ def zero_pad(seq):
 	return seq_
 
 #extracting the transcripts for just one chromosome
-fasta_seq = SeqIO.parse(open('./data/chr20.fa'), 'fasta')
+fasta_seq = SeqIO.parse(open('./data/hg38.fa'), 'fasta')
 
 for fasta in fasta_seq:
 	name, sequence = fasta.id, str(fasta.seq)
@@ -58,35 +58,34 @@ transcripts = []
 labels = []
 
 for row in transcript_file:
-	if row[0]=='chr20':
-		# adding the transcripts of the sense strand: whole transcript + flanks + zero-padded, labels + zero-padded
-		if row[1]=='+':
-			# extract the transcript sequence with 1k flanks
-			s = sequence[int(row[2])-1000 : int(row[3])+1000].upper()
-			if 'N' not in s:
-				# padding labels here 
-				pad = 5000 - (len(s)-2000)%5000
-				y = (pad//2)*'p' + 'a' + (len(s)-2002)*'b' + 'd' + (pad - pad//2)*'p'
-				labels.append(y)
-				# padding sequence with Os
-				s = zero_pad(s)
-				transcripts.append(s)
-		# adding the transcripts of the antisense strand
-		if row[1]=='-':
-			s = sequence[int(row[2])-1000 : int(row[3])+1000].upper()
-			if 'N' not in s:
-				# padding labels here 
-				pad = 5000 - (len(s)-2000)%5000
-				y = (pad//2)*'p' + 'a' + (len(s)-2002)*'b' + 'd' + (pad - pad//2)*'p'
-				# hot-encoding labels and adding hot-encoded labels to a new list
-				labels.append(y)
-				# getting complementary seq
-				s = ''.join([complementary(x) for x in s])
-				# padding sequence with Os
-				s = zero_pad(s)
-				transcripts.append(s)
+	# adding the transcripts of the sense strand: whole transcript + flanks + zero-padded, labels + zero-padded
+	if row[1]=='+':
+		# extract the transcript sequence with 1k flanks
+		s = sequence[int(row[2])-1000 : int(row[3])+1000].upper()
+		if 'N' not in s:
+			# padding labels here 
+			pad = 5000 - (len(s)-2000)%5000
+			y = (pad//2)*'p' + 'a' + (len(s)-2002)*'b' + 'd' + (pad - pad//2)*'p'
+			labels.append(y)
+			# padding sequence with Os
+			s = zero_pad(s)
+			transcripts.append(s)
+	# adding the transcripts of the antisense strand
+	if row[1]=='-':
+		s = sequence[int(row[2])-1000 : int(row[3])+1000].upper()
+		if 'N' not in s:
+			# padding labels here 
+			pad = 5000 - (len(s)-2000)%5000
+			y = (pad//2)*'p' + 'a' + (len(s)-2002)*'b' + 'd' + (pad - pad//2)*'p'
+			# hot-encoding labels and adding hot-encoded labels to a new list
+			labels.append(y)
+			# getting complementary seq
+			s = ''.join([complementary(x) for x in s])
+			# padding sequence with Os
+			s = zero_pad(s)
+			transcripts.append(s)
 
-print("GENCODE_v33_basic transcripts for a given chromosome: {}".format(len(transcripts)))
+print("GENCODE_v33_basic transcripts for hg38: {}".format(len(transcripts)))
 
 #cut these sequences and labels into 5000 chunks
 transcripts_ = []
@@ -101,5 +100,5 @@ for i in range(len(transcripts)):
 		transcripts_.append(s[5000*(j-1) : 5000*j+2000])
 		labels_.append(l[5000*(j-1) : 5000*j])
 
-np.savetxt('./data/transcripts_chunks_chr10', transcripts_, fmt='%s', delimiter='\t')
-np.savetxt('./data/labels_chunks_chr10', labels_, fmt='%s', delimiter='\t')
+np.savetxt('./data/transcripts', transcripts_, fmt='%s', delimiter='\t')
+np.savetxt('./data/labels', labels_, fmt='%s', delimiter='\t')
