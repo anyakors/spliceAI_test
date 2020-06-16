@@ -79,7 +79,7 @@ num_classes = 3
 epochs = 10
 
 #@tf.function 
-def custom_crossentropy_loss_(y_true, y_pred):
+def custom_crossentropy_loss(y_true, y_pred):
     
     # clip the predicted values so we never have to calc log of 0
     # norm the probas so the sum of all probas for one observation is 1
@@ -218,7 +218,7 @@ lr_scheduler = LearningRateScheduler(lr_schedule)
 
 model = spliceAI_model(input_shape=input_shape)
 
-model.compile(loss='categorical_crossentropy',
+model.compile(loss=custom_crossentropy_loss,
               optimizer=Adam(learning_rate=lr_schedule(0)),
               metrics=['accuracy'])
 
