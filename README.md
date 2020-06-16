@@ -2,12 +2,12 @@
 
 This is a test repository with code reproducing the method and architecture of Jaganathan et al. "Predicting Splicing from Primary Sequence with Deep Learning" (2019) Cell paper deep learning approach on splicing prediction.
 
-The sequence and label files for training are too heavy for a github repo, so the data_prep.py script is included to generate those files locally instead from genome+transcript files. To use it, download hg38.fa file of the latest human genome assembly into the ./data folder:
+The sequence and label files for training are too heavy for a github repo, so the data_prep.py script is included to generate those files locally instead from genome+transcript files. To use it, download .fa chromosome files (one or all, but the file generates chunks chromosome-by-chromosome, chr21 used as an example) of the latest human genome assembly into the ./data folder:
 
 ```
 cd ./data
-wget --timestamping 'ftp://hgdownload.cse.ucsc.edu/goldenPath/hg38/bigZips/hg38.fa.gz' -O hg38.fa.gz
-gunzip hg38.fa.gz
+wget --timestamping 'ftp://hgdownload.cse.ucsc.edu/goldenPath/hg38/chromosomes/chr21.fa.gz' -O chr21.fa.gz
+gunzip chr21.fa.gz
 ```
 
 and run the data_prep.py script. It will generate files with transcript sequences using GENCODE_v33_basic transcript annotations (downloaded from UCSC genome browser, Basic Gene Annotation Set from GENCODE Version 33 (Ensembl 99)) in chunks of 7000nt length (5000nt with 1000nt context on each side) for the sequences and 5000nt length for the labels with zero-pads as follows: 
