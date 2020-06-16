@@ -3,11 +3,9 @@ import keras
 from keras.layers import Dense, Conv1D, BatchNormalization, Activation, Dropout
 from keras.layers import AveragePooling2D, Input, Flatten, MaxPooling2D, Cropping1D
 from keras.optimizers import Adam
-from keras.callbacks import ModelCheckpoint, LearningRateScheduler
-from keras.regularizers import l2
+from keras.callbacks import LearningRateScheduler
 from keras import backend as K
 from keras.models import Model, Sequential
-from keras.utils import to_categorical, plot_model
 from keras import optimizers
 from keras import metrics
 import keras.backend as K
@@ -15,14 +13,10 @@ import keras.backend as K
 import tensorflow as tf
 print('eagerly?', tf.executing_eagerly())
 
-from sklearn.preprocessing import StandardScaler
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import confusion_matrix, classification_report
-from sklearn.metrics import roc_auc_score, accuracy_score
 
 import numpy as np
-import matplotlib.pyplot as plt
-import os
 
 def hot_encode_seq(let):
     if let=='A':
@@ -46,6 +40,24 @@ def hot_encode_label(let):
     elif let=='d':
         return([0,0,1])
 
+def dehot_encode_label(let):
+    if (let==[0,0,0]).all():
+        return('p')
+    elif (let==[1,0,0]).all():
+        return('b')
+    elif (let==[0,1,0]).all():
+        return('a')
+    elif (let==[0,0,1]).all():
+        return('d')
+
+def dehot_encode_pred(let):
+    if np.argmax(let)==0:
+        return('b')
+    elif np.argmax(let)==1:
+        return('a')
+    elif np.argmax(let)==2:
+        return('d')
+
 def transform_input(transcripts_, labels_):
     transcripts = []
     labels = []
@@ -57,7 +69,13 @@ def transform_input(transcripts_, labels_):
         labels.append([np.array(hot_encode_label(x)) for x in labels_[i]])
     return transcripts, labels
 
-def transform_labels():
+def transform_output(y_test, y_pred):
+    y_test_, y_pred_ = [], []
+    for vector in y_test:
+        y_test_.append([dehot_encode_label(x) for x in vector])
+    for vector in y_pred:
+        y_pred_.append([dehot_encode_pred(x) for x in vector])
+    return y_test_, y_pred_
 
 def lr_schedule(epoch):
     lr = 0.001
@@ -195,8 +213,8 @@ def spliceAI_model(input_shape, num_classes=3):
 
 
 # importing the data
-transcripts = np.loadtxt('./data/transcripts', dtype='str', delimiter='\t')
-labels = np.loadtxt('./data/labels', dtype='str', delimiter='\t')
+transcripts = np.loadtxt('./data/transcripts_chr21', dtype='str', delimiter='\t')
+labels = np.loadtxt('./data/labels_chr21', dtype='str', delimiter='\t')
 
 # one-hot-encoding
 transcripts, labels = transform_input(transcripts, labels)
@@ -231,3 +249,30 @@ model.save('./data/model_spliceAI2k')
 scores = model.evaluate(x_test, y_test, verbose=1)
 print('Test loss:', scores[0])
 print('Test accuracy:', scores[1])
+
+y_pred = model.predict(x_test)
+
+y_test, y_pred = transform_output(y_test, y_pred)
+
+donor_t_p, acceptor_t_p, blank_t_p = 0, 0, 0
+donor, acceptor, blank = 0, 0, 0 
+
+for i in range(len(y_test)):
+    for j in range(len(y_test[0])):
+        if y_test[i][j]==y_pred[i][j] and y_test[i][j]=='d':
+            donor += 1
+            donor_t_p += 1
+        elif y_test[i][j]==y_pred[i][j] and y_test[i][j]=='a':
+            acceptor += 1
+            acceptor_t_p += 1
+        elif y_test[i][j]==y_pred[i][j] and y_test[i][j]=='b':
+            blank += 1
+            blank_t_p += 1
+        elif y_test[i][j]=='d':
+            donor += 1
+        elif y_test[i][j]=='a':
+            acceptor += 1
+        elif y_test[i][j]=='b':
+            blank += 1
+            
+print("Out of {} blank {} TP, out of {} donor {} TP, out of {} acceptor {} TP".format(blank, blank_t_p, donor, donor_t_p, acceptor, acceptor_t_p))
