@@ -10,7 +10,7 @@ wget --timestamping 'ftp://hgdownload.cse.ucsc.edu/goldenPath/hg38/bigZips/hg38.
 gunzip hg38.fa.gz
 ```
 
-and run the data_prep.py script. It will generate files with transcript sequences in chunks of 7000 nt length (with 1000nt context on each side) for the sequences and 5000 nt length for the labels with zero-pads as follows: 
+and run the data_prep.py script. It will generate files with transcript sequences using GENCODE_v33_basic transcript annotations (downloaded from UCSC genome browser, Basic Gene Annotation Set from GENCODE Version 33 (Ensembl 99)) in chunks of 7000 nt length (with 1000nt context on each side) for the sequences and 5000 nt length for the labels with zero-pads as follows: 
 
 ![alt text](https://github.com/iamqoqao/spliceAI_test/blob/master/labels.png?raw=true)
 
