@@ -4,25 +4,27 @@ from keras.layers import Dense, Conv1D, BatchNormalization, Activation, Dropout
 from keras.layers import AveragePooling2D, Input, Flatten, MaxPooling2D, Cropping1D
 from keras.optimizers import Adam
 from keras.callbacks import ModelCheckpoint, LearningRateScheduler
-from keras.callbacks import ReduceLROnPlateau
-from keras.preprocessing.image import ImageDataGenerator
 from keras.regularizers import l2
 from keras import backend as K
 from keras.models import Model, Sequential
 from keras.utils import to_categorical, plot_model
-from keras.datasets import cifar10
 from keras import optimizers
+from keras import metrics
+import keras.backend as K
+
+import tensorflow as tf
+print('eagerly?', tf.executing_eagerly())
 
 from sklearn.preprocessing import StandardScaler
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import confusion_matrix, classification_report
+from sklearn.metrics import roc_auc_score, accuracy_score
 
 import numpy as np
+import matplotlib.pyplot as plt
 import os
 
-
 def hot_encode_seq(let):
-    #hot-encode the sequence, where "O" corresponds to zero-padded areas
     if let=='A':
         return([1,0,0,0])
     elif let=='T':
@@ -35,7 +37,6 @@ def hot_encode_seq(let):
         return([0,0,0,0])
 
 def hot_encode_label(let):
-    #hot-encode the labels, where "p" corresponds to zero-padded areas
     if let=='p':
         return([0,0,0])
     elif let=='b':
@@ -45,9 +46,20 @@ def hot_encode_label(let):
     elif let=='d':
         return([0,0,1])
 
+def transform_input(transcripts_, labels_):
+    transcripts = []
+    labels = []
+    # hot-encode
+    for i in range(len(transcripts_)):
+        # hot-encode seq
+        transcripts.append([np.array(hot_encode_seq(let)) for let in transcripts_[i]])
+        # hot-encode labels
+        labels.append([np.array(hot_encode_label(x)) for x in labels_[i]])
+    return transcripts, labels
+
+def transform_labels():
 
 def lr_schedule(epoch):
-    #learning rate scheduler
     lr = 0.001
     if epoch == 7:
         lr *= 0.5
@@ -60,11 +72,40 @@ def lr_schedule(epoch):
     print('Learning rate: ', lr)
     return lr
 
+
 # TRAINING PARAMETERS
-batch_size = 12
+batch_size = 128
 num_classes = 3
 epochs = 10
-data_augmentation = False
+
+#@tf.function 
+def custom_crossentropy_loss_(y_true, y_pred):
+    
+    # clip the predicted values so we never have to calc log of 0
+    # norm the probas so the sum of all probas for one observation is 1
+    y_pred /= tf.expand_dims(tf.reduce_sum(y_pred, axis=-1), -1)
+    y_pred = tf.keras.backend.clip(y_pred, 1e-15, 1-1e-15)
+    
+    # mask for blank, donor, acceptor sites 
+    mask_b = np.array([True, False, False])
+    mask_a = np.array([False, True, False])
+    mask_d = np.array([False, False, True])
+    
+    # normalize the labels by the number of samples of each class
+    labels_b = tf.squeeze(tf.boolean_mask(y_true, mask_b, axis=2))
+    labels_b /= tf.add(tf.expand_dims(tf.reduce_sum(labels_b, axis=-1), -1), tf.constant(1e-15))
+    
+    labels_a = tf.squeeze(tf.boolean_mask(y_true, mask_a, axis=2))
+    labels_a /= tf.add(tf.expand_dims(tf.reduce_sum(labels_a, axis=-1), -1), tf.constant(1e-15))
+    
+    labels_d = tf.squeeze(tf.boolean_mask(y_true, mask_d, axis=2))
+    labels_d /= tf.add(tf.expand_dims(tf.reduce_sum(labels_d, axis=-1), -1), tf.constant(1e-15))
+    
+    # stack everything back normalized
+    labels_norm = tf.stack([labels_b, labels_a, labels_d], axis=-1)
+    
+    return -tf.reduce_sum(labels_norm*tf.keras.backend.log(y_pred))
+
 
 def RB_block(inputs,
              num_filters=32,
@@ -113,40 +154,34 @@ def spliceAI_model(input_shape, num_classes=3):
     # Returns
         model (Model): Keras model instance
     """
-
     inputs = Input(shape=input_shape)
 
     # initiate 
     x = Conv1D(32, kernel_size=1, strides=1, padding='same', dilation_rate=1)(inputs)
 
-    # shortcut 1: just another Conv on x
+    # another Conv on x before splitting
     y = Conv1D(32, kernel_size=1, strides=1, padding='same', dilation_rate=1)(x)
 
     # RB 1: 32 11 1
     for stack in range(4):
         x = RB_block(x, num_filters=32, kernel_size=11, strides=1, activation='relu', dilation_rate=1)
 
-    # shortcut 2: Conv on x + add to existing shortcut
     y = keras.layers.add([Conv1D(32, kernel_size=1, strides=1, padding='same', dilation_rate=1)(x), y])
 
     # RB 2: 32 11 4
     for stack in range(4):
         x = RB_block(x, num_filters=32, kernel_size=11, strides=1, activation='relu', dilation_rate=4)
 
-    # shortcut 3: Conv on x + add to existing shortcut
     y = keras.layers.add([Conv1D(32, kernel_size=1, strides=1, padding='same', dilation_rate=1)(x), y])  
-
     # RB 3: 32 21 10
     for stack in range(4):
         x = RB_block(x, num_filters=32, kernel_size=21, strides=1, activation='relu', dilation_rate=10)
 
-    # another Conv on x
     x = Conv1D(32, kernel_size=1, strides=1, padding='same', dilation_rate=1)(x)
 
-    # now adding up with what was shortcut from the prev layers
+    # adding up with what was shortcut from the prev layers
     x = keras.layers.add([x, y]) 
 
-    # final Conv
     x = Conv1D(3, kernel_size=1, strides=1, padding='same', dilation_rate=1)(x)
 
     x = Dense(num_classes, activation='softmax')(x)
@@ -159,18 +194,12 @@ def spliceAI_model(input_shape, num_classes=3):
     return model
 
 
-transcripts_ = np.loadtxt('./data/transcripts', dtype='str', delimiter='\t')
-labels_ = np.loadtxt('./data/labels', dtype='str', delimiter='\t')
+# importing the data
+transcripts = np.loadtxt('./data/transcripts', dtype='str', delimiter='\t')
+labels = np.loadtxt('./data/labels', dtype='str', delimiter='\t')
 
-transcripts = []
-labels = []
-
-# hot-encode
-for i in range(len(transcripts_)):
-    # hot-encode seq
-    transcripts.append([np.array(hot_encode_seq(let)) for let in transcripts_[i]])
-    # hot-encode labels
-    labels.append([np.array(hot_encode_label(x)) for x in labels_[i]])
+# one-hot-encoding
+transcripts, labels = transform_input(transcripts, labels)
 
 transcripts = np.array(transcripts)
 labels = np.array(labels)
@@ -195,19 +224,10 @@ model.compile(loss='categorical_crossentropy',
 
 print(model.summary())
 
-model.fit(x_train, y_train, batch_size=batch_size, epochs=epochs, callbacks=[lr_scheduler], validation_data=(x_test, y_test), shuffle=True)
+model.fit(x_train, y_train, batch_size=batch_size, epochs=epochs, callbacks=[lr_scheduler], validation_split=0.1, shuffle=True)
 
 model.save('./data/model_spliceAI2k')
 
 scores = model.evaluate(x_test, y_test, verbose=1)
 print('Test loss:', scores[0])
 print('Test accuracy:', scores[1])
-
-predictions = model.predict(x_test)
-
-print(predictions)
-
-print(classification_report(y_test.argmax(axis=1),
-    predictions.argmax(axis=1), target_names=['Blank', 'Donor', 'Acceptor']))
-
-print(confusion_matrix(y_test.argmax(axis=1), predictions.argmax(axis=1)))
