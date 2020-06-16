@@ -14,4 +14,4 @@ and run the data_prep.py script. It will generate files with transcript sequence
 
 ![alt text](https://github.com/iamqoqao/spliceAI_test/blob/master/labels.png?raw=true)
 
-where 'p' is the pad indication in the labels and 'O' is the pad indication for the seq, and acceptor and donor sites are the last/first sites of the context sequence (transcript sequence starts with the exon, but acceptor and donor sites are the last and the first sites of the intron, so they're adjacent to the exon on the left/right). Then the training script might be run.
+where 'p' is the pad indication in the labels and 'O' is the pad indication for the seq, and acceptor and donor sites are the last/first sites of the context sequence (transcript sequence starts with the exon, but acceptor and donor sites are the last and the first sites of the intron, so they're adjacent to the exon on the left/right). The training script itself (with a normalised loss) is included for reference.
