@@ -10,6 +10,8 @@ from keras import optimizers
 from keras import metrics
 import keras.backend as K
 
+import math
+
 import tensorflow as tf
 print('eagerly?', tf.executing_eagerly())
 
@@ -95,6 +97,24 @@ def lr_schedule(epoch):
 batch_size = 128
 num_classes = 3
 epochs = 10
+
+
+class DataGenerator(keras.utils.Sequence):
+    
+    def __init__(self, x_set, y_set, batch_size):
+        self.x, self.y = x_set, y_set
+        self.batch_size = batch_size
+
+    def __len__(self):
+        return math.ceil(len(self.x) / self.batch_size)
+
+    def __getitem__(self, idx):
+        batch_x = self.x[idx * self.batch_size:(idx + 1) *
+        self.batch_size]
+        batch_y = self.y[idx * self.batch_size:(idx + 1) *
+        self.batch_size]
+
+        return np.array(batch_x), np.array(batch_y)
 
 #@tf.function 
 def custom_crossentropy_loss(y_true, y_pred):
@@ -242,7 +262,10 @@ model.compile(loss=custom_crossentropy_loss,
 
 print(model.summary())
 
-model.fit(x_train, y_train, batch_size=batch_size, epochs=epochs, callbacks=[lr_scheduler], validation_split=0.1, shuffle=True)
+training_generator = DataGenerator(x_train, y_train, batch_size)
+
+#model.fit(x_train, y_train, batch_size=batch_size, epochs=epochs, callbacks=[lr_scheduler], validation_split=0.1, shuffle=True)
+model.fit(training_generator, epochs=epochs, callbacks=[lr_scheduler], shuffle=True)
 
 model.save('./data/model_spliceAI2k')
 
