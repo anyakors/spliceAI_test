@@ -13,6 +13,20 @@ def complementary(let):
 	if let=='G':
 		return 'C'
 
+
+def make_labels(s, context, es, ee):
+
+	es, ee = [int(i)-int(es[0]) for i in es], [int(i)-int(es[0]) for i in ee]
+	y = 'b'*(len(s)-context*2+2)
+
+	for i in range(len(es)):
+		y = y[:es[i]]+'a'+y[es[i]+1:ee[i]]+'d'+y[ee[i]+1:]
+
+	pad = 5000 - (len(s)-context*2)%5000
+	y = (pad//2-1)*'p' + y + (pad - pad//2-1)*'p'
+
+	return y
+
 # genome import, latest version
 fasta_seq = SeqIO.parse(open('./data/chr21.fa'), 'fasta')
 
@@ -20,7 +34,7 @@ for fasta in fasta_seq:
 	name, sequence = fasta.id, str(fasta.seq)
 
 # file with all principal gene transcripts from GENCODE v33
-transcript_file = np.genfromtxt('./data/GENCODE_v33_basic', usecols=(2,3,4,5), dtype='str')
+transcript_file = np.genfromtxt('./data/GENCODE_v33_basic', usecols=(2,3,4,5,9,10), dtype='str')
 
 transcripts = []
 labels = []
@@ -29,18 +43,19 @@ labels = []
 context = 1000
 
 for row in transcript_file:
-	# explicitly checking chromosome number
+	# explicitly checking transcript_name
 	if row[0]=='chr21':
+		# sequence from start to end
 		s = sequence[int(row[2])-context : int(row[3])+context].upper()
 		# adding the transcripts of the sense strand: whole transcript + flanks + zero-padded, labels + zero-padded
 		if row[1]=='+':
 			# extract the transcript sequence with 1k flanks
-			s = sequence[int(row[2])-context : int(row[3])+context].upper()
 			if 'N' not in s:
 				# padding labels here 
 				pad = 5000 - (len(s)-context*2)%5000
+				es, ee = row[4].split(',')[:-1], row[5].split(',')[:-1]
 				# decrease the pad length from both sides because the context-1 and context+sequence+1 sites are donor and acceptor, respectively
-				y = (pad//2-1)*'p' + 'a' + (len(s)-context*2)*'b' + 'd' + (pad - pad//2-1)*'p'
+				y = make_labels(s, context, es, ee)
 				labels.append(y)
 				# padding sequence with Os
 				s = (pad//2)*'O' + s + (pad - pad//2)*'O'
@@ -51,9 +66,11 @@ for row in transcript_file:
 				# padding labels here 
 				pad = 5000 - (len(s)-context*2)%5000
 				# decrease the pad length from both sides because the context-1 and context+sequence+1 sites are donor and acceptor, respectively
-				y = (pad//2-1)*'p' + 'a' + (len(s)-context*2)*'b' + 'd' + (pad - pad//2-1)*'p'
-				# hot-encoding labels and adding hot-encoded labels to a new list
+				es, ee = row[4].split(',')[:-1], row[5].split(',')[:-1]
+				# decrease the pad length from both sides because the context-1 and context+sequence+1 sites are donor and acceptor, respectively
+				y = make_labels(s, context, es, ee)
 				labels.append(y)
+				# hot-encoding labels and adding hot-encoded labels to a new list
 				# getting complementary seq
 				s = ''.join([complementary(x) for x in s])
 				# padding sequence with Os
