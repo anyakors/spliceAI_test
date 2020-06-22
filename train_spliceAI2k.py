@@ -18,7 +18,7 @@ print('eagerly?', tf.executing_eagerly())
 # TRAINING PARAMETERS
 batch_size = 128
 num_classes = 3
-epochs = 10
+epochs = 1
 
 class DataGenerator(keras.utils.Sequence):
 
@@ -40,8 +40,8 @@ class DataGenerator(keras.utils.Sequence):
 start_time = time.time()
 
 # importing the data
-transcripts = np.loadtxt('./data/transcripts_chr1', dtype='str', delimiter='\t', max_rows=100)
-labels = np.loadtxt('./data/labels_chr1', dtype='str', delimiter='\t', max_rows=100)
+transcripts = np.loadtxt('./data/transcripts_chr21', dtype='str', delimiter='\t', max_rows=1000)
+labels = np.loadtxt('./data/labels_chr21', dtype='str', delimiter='\t', max_rows=1000)
 
 # one-hot-encoding
 transcripts, labels = transform_input(transcripts, labels)

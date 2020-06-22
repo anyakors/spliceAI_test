@@ -52,6 +52,24 @@ def custom_crossentropy_loss(y_true, y_pred):
     return -tf.reduce_sum(labels_norm * tf.keras.backend.log(y_pred))
 
 
+def topk_accuracy(y_true, y_pred):
+
+    y_true = y_true.reshape([len(y_true)*5000, 3])
+    y_pred = y_true.reshape([len(y_pred)*5000, 3])
+
+    a_true, d_true = np.nonzero(y_true[:, 1]), np.nonzero(y_true[:, 2])
+    k = len(a_true[0])
+
+    a_pred, d_pred = y_pred[:, 1], y_pred[:, 2]
+    a_pred_topk = np.argsort(a_pred, axis=-1)[-k:]
+    d_pred_topk = np.argsort(d_pred, axis=-1)[-k:]
+
+    accuracy = len(np.intersect1d(a_true, a_pred_topk)) / len(a_true) + \
+               len(np.intersect1d(d_true, d_pred_topk)) / len(d_true)
+
+    return accuracy
+
+
 def RB_block(inputs,
              num_filters=32,
              kernel_size=11,
