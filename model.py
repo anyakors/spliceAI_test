@@ -1,3 +1,4 @@
+from utils import *
 import numpy as np
 
 import keras
@@ -52,7 +53,7 @@ def custom_crossentropy_loss(y_true, y_pred):
     return -tf.reduce_sum(labels_norm * tf.keras.backend.log(y_pred))
 
 
-def topk_accuracy(y_true, y_pred):
+def topk_accuracy_(y_true, y_pred):
 
     y_true = y_true.reshape([len(y_true)*5000, 3])
     y_pred = y_true.reshape([len(y_pred)*5000, 3])
@@ -124,3 +125,30 @@ def spliceAI_model(input_shape, num_classes=3):
     model = Model(inputs=inputs, outputs=outputs)
 
     return model
+
+
+def topk_accuracy(y_test, y_pred):
+
+    y_test, y_pred = transform_output(y_test, y_pred)
+    donor_t_p, acceptor_t_p, blank_t_p = 0, 0, 0
+    donor, acceptor, blank = 0, 0, 0
+
+    for i in range(len(y_test)):
+        for j in range(len(y_test[0])):
+            if y_test[i][j] == y_pred[i][j] and y_test[i][j] == 'd':
+                donor += 1
+                donor_t_p += 1
+            elif y_test[i][j] == y_pred[i][j] and y_test[i][j] == 'a':
+                acceptor += 1
+                acceptor_t_p += 1
+            elif y_test[i][j] == y_pred[i][j] and y_test[i][j] == 'b':
+                blank += 1
+                blank_t_p += 1
+            elif y_test[i][j] == 'd':
+                donor += 1
+            elif y_test[i][j] == 'a':
+                acceptor += 1
+            elif y_test[i][j] == 'b':
+                blank += 1
+
+    return (0.5*(donor_t_p/donor + acceptor_t_p/acceptor))

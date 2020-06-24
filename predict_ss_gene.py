@@ -74,7 +74,7 @@ x_test, y_test = transform_input(transcript_chunks, label_chunks)
 x_test = np.array(x_test)
 y_test = np.array(y_test)
 
-model = tf.keras.models.load_model('./data/model_spliceAI2k_customCE', compile=False)
+model = tf.keras.models.load_model('./data/model_spliceAI2k_chr1', compile=False)
 
 y_pred = model.predict(x_test)
 

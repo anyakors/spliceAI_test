@@ -74,7 +74,11 @@ print(model.summary())
 start_time = time.time()
 training_generator = DataGenerator(x_train, y_train, batch_size)
 
-model.fit(training_generator, epochs=epochs, callbacks=[lr_scheduler], shuffle=True)
+for e in range(1, 10):
+    model.fit(training_generator, epochs=e+1, initial_epoch=e, callbacks=[lr_scheduler], shuffle=True)
+    y_pred = model.predict(x_test)
+    if topk_accuracy(y_test, y_pred)>0.70:
+        break
 
 print("Fitting: {} seconds".format(time.time() - start_time))
 
