@@ -1,4 +1,5 @@
 from utils import *
+from model import topk_accuracy_
 
 import numpy as np
 from Bio import SeqIO
@@ -15,16 +16,18 @@ for fasta in fasta_seq:
     name, sequence = fasta.id, str(fasta.seq)
 
 # file with all principal gene transcripts from GENCODE v33
-transcript_file = np.genfromtxt('./data/GENCODE_v33_basic', usecols=(1, 3, 4, 5, 9, 10), dtype='str')
+transcript_file = np.genfromtxt('./data/GENCODE_v33_basic', usecols=(1, 3, 4, 5, 9, 10, 12), dtype='str')
+canonical = np.genfromtxt('./data/GENCODE_v32_hg38_canonical_chr21', usecols=(4,), dtype='str')
 
-transcript_name = 'ENST00000612267' # AF254983.1
+gene_name = 'TIAM1' # AF254983.1
 
 # flanking ends on each side are of this length to include some context
 context = 1000
 
 for row in transcript_file:
     # explicitly checking transcript_name
-    if transcript_name in row[0]:
+    if row[6]==gene_name and row[0] in canonical:
+        print(row[6], row[0])
         # sequence from start to end
         s = sequence[int(row[2]) - context: int(row[3]) + context].upper()
         # adding the transcripts of the sense strand: whole transcript + flanks + zero-padded, labels + zero-padded
@@ -74,31 +77,24 @@ x_test, y_test = transform_input(transcript_chunks, label_chunks)
 x_test = np.array(x_test)
 y_test = np.array(y_test)
 
-model = tf.keras.models.load_model('./data/model_spliceAI2k_chr1', compile=False)
+model = tf.keras.models.load_model('./data/model_spliceAI2k_basic_chr1', compile=False)
 
 y_pred = model.predict(x_test)
+print('Top-k accuracy: {:.2f}'.format(topk_accuracy_(y_test, y_pred)))
 
-# Quantify
+# Extract topk
+
+y_test = y_test.reshape([len(y_test) * 5000, 3])
+y_pred = y_pred.reshape([len(y_pred) * 5000, 3])
+
+a_true, d_true = np.nonzero(y_test[:, 1]), np.nonzero(y_test[:, 2])
+k = len(a_true[0])
+
+a_pred, d_pred = y_pred[:, 1], y_pred[:, 2]
+a_pred_topk = np.argsort(a_pred, axis=-1)[-k:]
+d_pred_topk = np.argsort(d_pred, axis=-1)[-k:]
 
 # Plot
-
-es, ee = [int(i) - int(es[0]) for i in es], [int(i) - int(es[0]) for i in ee]
-
-a, d = y_pred[:,:,1], y_pred[:,:,2]
-
-a_, d_ = [], []
-for row in a:
-    a_.extend(row)
-for row in d:
-    d_.extend(row)
-
-a_, d_ = a_[pad // 2 - 1:-pad // 2 + 1], d_[pad // 2 - 1:-pad // 2 + 1]
-
-k = len(es)
-a_topk_ind = np.argsort(a_, axis=-1)[-k:]
-d_topk_ind = np.argsort(d_, axis=-1)[-k:]
-
-print(len(a_topk_ind), len(d_topk_ind))
 
 def add_exon_real(x_start, x_end):
     exon = go.Scatter(
@@ -127,19 +123,34 @@ def add_exon_pred(x_start):
     return exon
 
 
+def add_true_line(x):
+    line = go.Scatter(
+        x=[x, x],
+        y=[0.5, 0.6],
+        mode='lines',
+        line=dict(color='rgb(55, 255, 55)', width=2),
+    )
+    return line
+
 data = []
 
-for x in zip(es, ee):
+for x in zip(a_true[0], d_true[0]):
     data.append(add_exon_real(x[0], x[1]))
 
-for x in a_topk_ind:
+for x in a_pred_topk:
     data.append(add_exon_pred(x))
 
-for x in d_topk_ind:
+for x in d_pred_topk:
     data.append(add_exon_pred(x))
 
-layout = go.Layout(title='junctions AF254983.1')
+for x in np.intersect1d(a_true, a_pred_topk):
+    data.append(add_true_line(x))
+
+for x in np.intersect1d(d_true, d_pred_topk):
+    data.append(add_true_line(x))
+
+layout = go.Layout(title='junctions TIAM1')
 
 fig = go.Figure(data=data, layout=layout)
 fig['layout']['yaxis'].update(title='', range=[0.0, 1.0])
-pyo.plot(fig, filename='junctions_lines.html')
+pyo.plot(fig, filename='junctions_lines_TIAM1.html')

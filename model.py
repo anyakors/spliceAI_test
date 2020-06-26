@@ -56,7 +56,7 @@ def custom_crossentropy_loss(y_true, y_pred):
 def topk_accuracy_(y_true, y_pred):
 
     y_true = y_true.reshape([len(y_true)*5000, 3])
-    y_pred = y_true.reshape([len(y_pred)*5000, 3])
+    y_pred = y_pred.reshape([len(y_pred)*5000, 3])
 
     a_true, d_true = np.nonzero(y_true[:, 1]), np.nonzero(y_true[:, 2])
     k = len(a_true[0])
@@ -65,8 +65,8 @@ def topk_accuracy_(y_true, y_pred):
     a_pred_topk = np.argsort(a_pred, axis=-1)[-k:]
     d_pred_topk = np.argsort(d_pred, axis=-1)[-k:]
 
-    accuracy = len(np.intersect1d(a_true, a_pred_topk)) / len(a_true) + \
-               len(np.intersect1d(d_true, d_pred_topk)) / len(d_true)
+    accuracy = 0.5*len(np.intersect1d(a_true, a_pred_topk)) / k + \
+               0.5*len(np.intersect1d(d_true, d_pred_topk)) / k
 
     return accuracy
 

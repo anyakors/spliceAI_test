@@ -77,12 +77,12 @@ training_generator = DataGenerator(x_train, y_train, batch_size)
 for e in range(1, 10):
     model.fit(training_generator, epochs=e+1, initial_epoch=e, callbacks=[lr_scheduler], shuffle=True)
     y_pred = model.predict(x_test)
-    acc = topk_accuracy(y_test, y_pred)
+    acc = topk_accuracy_(y_test, y_pred)
     print('Current top-k accuracy: {:.2f}'.format(acc))
-    if acc>0.70:
+    if acc>0.90:
         break
 
-print("Fitting: {} seconds".format(time.time() - start_time))
+print("Fitting: {:.2f} seconds".format(time.time() - start_time))
 
 model.save('./data/model_spliceAI2k')
 
