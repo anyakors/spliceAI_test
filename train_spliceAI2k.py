@@ -40,8 +40,8 @@ class DataGenerator(keras.utils.Sequence):
 start_time = time.time()
 
 # importing the data
-transcripts = np.loadtxt('./data/transcripts_chr21', dtype='str', delimiter='\t', max_rows=1000)
-labels = np.loadtxt('./data/labels_chr21', dtype='str', delimiter='\t', max_rows=1000)
+transcripts = np.loadtxt('./data/transcripts_chr1', dtype='str', delimiter='\t')
+labels = np.loadtxt('./data/labels_chr1', dtype='str', delimiter='\t')
 
 # one-hot-encoding
 transcripts, labels = transform_input(transcripts, labels)
@@ -77,7 +77,9 @@ training_generator = DataGenerator(x_train, y_train, batch_size)
 for e in range(1, 10):
     model.fit(training_generator, epochs=e+1, initial_epoch=e, callbacks=[lr_scheduler], shuffle=True)
     y_pred = model.predict(x_test)
-    if topk_accuracy(y_test, y_pred)>0.70:
+    acc = topk_accuracy(y_test, y_pred)
+    print('Current top-k accuracy: {:.2f}'.format(acc))
+    if acc>0.70:
         break
 
 print("Fitting: {} seconds".format(time.time() - start_time))
