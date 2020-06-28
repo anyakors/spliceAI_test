@@ -40,8 +40,8 @@ class DataGenerator(keras.utils.Sequence):
 start_time = time.time()
 
 # importing the data
-transcripts = np.loadtxt('./data/transcripts_chr1_3', dtype='str', delimiter='\t')
-labels = np.loadtxt('./data/labels_chr1_3', dtype='str', delimiter='\t')
+transcripts = np.loadtxt('./data/transcripts_HEX_chr21', dtype='str', delimiter='\t')
+labels = np.loadtxt('./data/labels_HEX_chr21', dtype='str', delimiter='\t')
 
 # one-hot-encoding
 transcripts, labels = transform_input(transcripts, labels)
@@ -65,9 +65,9 @@ lr_scheduler = LearningRateScheduler(lr_schedule)
 
 model = spliceAI_model(input_shape=input_shape)
 
-model.compile(loss=custom_crossentropy_loss,
+model.compile(loss=tf.keras.losses.MeanSquaredError(),
               optimizer=Adam(learning_rate=lr_schedule(0)),
-              metrics=['accuracy'])
+              metrics=tf.keras.metrics.MeanSquaredError())
 
 print(model.summary())
 

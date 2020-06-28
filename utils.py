@@ -102,3 +102,28 @@ def transform_output(y_test, y_pred):
         y_pred_.append([dehot_encode_pred(x) for x in vector])
 
     return y_test_, y_pred_
+
+
+def form_transcripts(hexevent):
+    transcripts = {'gene': [], 'strand': [], 'exons': [], 'incl': []}
+    c = None
+    l = []
+    n = []
+    for row in hexevent:
+        if row[-1]!='onlyEST':
+            if c is None:
+                c = row[-1]
+                l.extend([row[2], row[3]])
+                n.extend([row[10]])
+            elif c is not None and c==row[-1]:
+                l.extend([row[2], row[3]])
+                n.extend([row[10]])
+            else:
+                transcripts['gene'].append(c)
+                transcripts['strand'].append(row[1])
+                transcripts['exons'].append(l)
+                transcripts['incl'].append(n)
+                c = row[-1]
+                l = [row[2], row[3]]
+                n = [row[10]]
+    return transcripts
