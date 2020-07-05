@@ -17,7 +17,7 @@ print('eagerly?', tf.executing_eagerly())
 
 # TRAINING PARAMETERS
 batch_size = 128
-num_classes = 3
+num_classes = 1
 epochs = 1
 
 class DataGenerator(keras.utils.Sequence):
@@ -44,10 +44,16 @@ transcripts = np.loadtxt('./data/transcripts_HEX_chr21', dtype='str', delimiter=
 labels = np.loadtxt('./data/labels_HEX_chr21', dtype='str', delimiter='\t')
 
 # one-hot-encoding
-transcripts, labels = transform_input(transcripts, labels)
+transcripts_ = []
+labels_ = []
 
-transcripts = np.array(transcripts)
-labels = np.array(labels)
+for i in range(len(transcripts)):
+    # hot-encode seq
+    transcripts_.append([np.array(hot_encode_seq(let)) for let in transcripts[i]])
+    labels_.append([float(x) for x in labels[i]])
+
+transcripts = np.array(transcripts_)
+labels = np.array(labels_)
 
 (x_train, x_test, y_train, y_test) = train_test_split(transcripts,
                                                       labels, test_size=0.2)
@@ -63,9 +69,9 @@ print("Data prep: {} seconds".format(time.time() - start_time))
 
 lr_scheduler = LearningRateScheduler(lr_schedule)
 
-model = spliceAI_model(input_shape=input_shape)
+model = spliceAI_model(input_shape=input_shape, num_classes=num_classes)
 
-model.compile(loss=tf.keras.losses.MeanSquaredError(),
+model.compile(loss=MSE_masked,
               optimizer=Adam(learning_rate=lr_schedule(0)),
               metrics=tf.keras.metrics.MeanSquaredError())
 
@@ -74,46 +80,12 @@ print(model.summary())
 start_time = time.time()
 training_generator = DataGenerator(x_train, y_train, batch_size)
 
-for e in range(1, 11):
+for e in range(1, 5):
     model.fit(training_generator, epochs=e+1, initial_epoch=e, callbacks=[lr_scheduler], shuffle=True)
-    y_pred = model.predict(x_test)
-    acc = topk_accuracy_(y_test, y_pred)
-    print('Current top-k accuracy: {:.2f}'.format(acc))
-    model.save('./data/model_spliceAI2k_chr1_3')
-    if acc>0.90:
-        break
+    model.save('./data/model_regression_HEX_chr21')
 
 print("Fitting: {} seconds".format(time.time() - start_time))
 
 scores = model.evaluate(x_test, y_test, verbose=1)
 print('Test loss:', scores[0])
 print('Test accuracy:', scores[1])
-
-y_pred = model.predict(x_test)
-
-y_test, y_pred = transform_output(y_test, y_pred)
-
-donor_t_p, acceptor_t_p, blank_t_p = 0, 0, 0
-donor, acceptor, blank = 0, 0, 0
-
-for i in range(len(y_test)):
-    for j in range(len(y_test[0])):
-        if y_test[i][j] == y_pred[i][j] and y_test[i][j] == 'd':
-            donor += 1
-            donor_t_p += 1
-        elif y_test[i][j] == y_pred[i][j] and y_test[i][j] == 'a':
-            acceptor += 1
-            acceptor_t_p += 1
-        elif y_test[i][j] == y_pred[i][j] and y_test[i][j] == 'b':
-            blank += 1
-            blank_t_p += 1
-        elif y_test[i][j] == 'd':
-            donor += 1
-        elif y_test[i][j] == 'a':
-            acceptor += 1
-        elif y_test[i][j] == 'b':
-            blank += 1
-
-print(
-    "Out of {} blank {} TP, out of {} donor {} TP, out of {} acceptor {} TP".format(blank, blank_t_p, donor, donor_t_p,
-                                                                                    acceptor, acceptor_t_p))

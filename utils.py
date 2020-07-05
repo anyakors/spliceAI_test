@@ -127,3 +127,23 @@ def form_transcripts(hexevent):
                 l = [row[2], row[3]]
                 n = [row[10]]
     return transcripts
+
+
+def form_transcript(hexevent, gene_name):
+    transcript = {'gene': [], 'strand': [], 'exons': [], 'incl': []}
+    c = None
+    l = []
+    n = []
+    for row in hexevent:
+        if row[-1]==gene_name:
+            l.extend([row[2], row[3]])
+            n.extend([row[10]])
+            if c==None:
+                transcript['gene'].append(gene_name)
+                transcript['strand'].append(row[1])
+                c = 1
+
+    transcript['exons'].append(l)
+    transcript['incl'].append(n)
+
+    return transcript

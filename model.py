@@ -1,12 +1,14 @@
 from utils import *
 import numpy as np
 
-import keras
-from keras.layers import Dense, Conv1D, BatchNormalization, Activation
-from keras.layers import Input, Cropping1D
-from keras.models import Model
-
 import tensorflow as tf
+
+import keras
+
+from tensorflow.keras.layers import Dense, Conv1D, BatchNormalization, Activation
+from tensorflow.keras.layers import Input, Cropping1D
+from tensorflow.keras.models import Model
+from tensorflow.python.ops import math_ops
 
 print('eagerly?', tf.executing_eagerly())
 
@@ -71,6 +73,17 @@ def topk_accuracy_(y_true, y_pred):
     return accuracy
 
 
+def MSE_masked(y_true, y_pred):
+
+    mask = tf.math.not_equal(y_true, -1)
+    weights = tf.cast(mask, tf.float32)
+
+    y_true = tf.math.multiply(y_true, weights)
+    y_pred = tf.math.multiply(y_pred, weights)
+
+    return tf.reduce_mean(math_ops.square(y_pred - y_true), axis=-1)
+
+
 def RB_block(inputs,
              num_filters=32,
              kernel_size=11,
@@ -117,8 +130,13 @@ def spliceAI_model(input_shape, num_classes=3):
     x = Conv1D(32, kernel_size=1, strides=1, padding='same', dilation_rate=1)(x)
     # adding up with what was shortcut from the prev layers
     x = keras.layers.add([x, y])
-    x = Conv1D(3, kernel_size=1, strides=1, padding='same', dilation_rate=1)(x)
-    x = Dense(num_classes, activation='softmax')(x)
+
+    if num_classes>1:
+        x = Conv1D(3, kernel_size=1, strides=1, padding='same', dilation_rate=1)(x)
+        x = Dense(num_classes, activation='softmax')(x)
+    else:
+        x = Conv1D(1, kernel_size=1, strides=1, padding='same', dilation_rate=1)(x)
+        x = Dense(1)(x)
     # crop to fit the labels (7k to 5k)
     outputs = Cropping1D(cropping=(1000, 1000))(x)
 
