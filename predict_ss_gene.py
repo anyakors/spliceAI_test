@@ -77,10 +77,11 @@ x_test, y_test = transform_input(transcript_chunks, label_chunks)
 x_test = np.array(x_test)
 y_test = np.array(y_test)
 
-model = tf.keras.models.load_model('./data/model_spliceAI2k_basic_chr1', compile=False)
+model = tf.keras.models.load_model('./data/model_spliceAI2k_chr1_3', compile=False)
 
 y_pred = model.predict(x_test)
-print('Top-k accuracy: {:.2f}'.format(topk_accuracy_(y_test, y_pred)))
+acc = topk_accuracy_(y_test, y_pred)
+print('Top-k accuracy: {:.2f}'.format(acc))
 
 # Extract topk
 
@@ -149,7 +150,7 @@ for x in np.intersect1d(a_true, a_pred_topk):
 for x in np.intersect1d(d_true, d_pred_topk):
     data.append(add_true_line(x))
 
-layout = go.Layout(title='junctions TIAM1')
+layout = go.Layout(title='junctions TIAM1, topk = {:.2f}'.format(acc))
 
 fig = go.Figure(data=data, layout=layout)
 fig['layout']['yaxis'].update(title='', range=[0.0, 1.0])

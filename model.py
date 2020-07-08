@@ -75,7 +75,7 @@ def topk_accuracy_(y_true, y_pred):
 
 def MSE_masked(y_true, y_pred):
 
-    mask = tf.math.not_equal(y_true, -1)
+    mask = tf.math.not_equal(y_true, 9)
     weights = tf.cast(mask, tf.float32)
 
     y_true = tf.math.multiply(y_true, weights)
@@ -136,7 +136,7 @@ def spliceAI_model(input_shape, num_classes=3):
         x = Dense(num_classes, activation='softmax')(x)
     else:
         x = Conv1D(1, kernel_size=1, strides=1, padding='same', dilation_rate=1)(x)
-        x = Dense(1)(x)
+        x = Dense(1, activation='relu')(x)
     # crop to fit the labels (7k to 5k)
     outputs = Cropping1D(cropping=(1000, 1000))(x)
 

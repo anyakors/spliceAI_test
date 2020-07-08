@@ -94,27 +94,9 @@ y_pred = model.predict(x_test)
 y_test = y_test.reshape(len(y_test) * 5000)
 y_pred = y_pred.reshape(len(y_pred) * 5000)
 
-a_true, d_true = [x+pad//2 for x in es], [x+pad//2 for x in ee]
-
 # Plot
 
-def add_exon_real(x_start, x_end):
-    exon = go.Scatter(
-        x=[x_start, x_end],
-        y=[1.6, 1.6],
-        mode='lines+markers',
-        marker=dict(
-            color='rgb(55, 255, 55)',
-            size=6,
-        ),
-        line=dict(color='rgb(55, 255, 55)', width=5),
-    )
-    return exon
-
 data = []
-
-#for x in zip(a_true, d_true):
-#    data.append(add_exon_real(x[0], x[1]))
 
 data.append(go.Scatter(x=np.arange(len(y_test)), y=y_test, mode='lines', line=dict(color='rgb(55, 255, 55)', width=5)))
 data.append(go.Scatter(x=np.arange(len(y_pred)), y=y_pred, mode='lines', line=dict(color='rgb(255, 55, 55)', width=5)))
